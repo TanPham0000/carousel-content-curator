@@ -1,2 +1,19 @@
 
-[]
+[
+  {
+    "id": "slide4",
+    "image": "uploads/default-slide4.jpg",
+    "title": "Dynamic Slide 4",
+    "description": "This is the fourth slide with dynamic content.",
+    "link": "https://example.com/slide4",
+    "timestamp": 1620000000
+  },
+  {
+    "id": "slide5",
+    "image": "uploads/default-slide5.jpg",
+    "title": "Dynamic Slide 5",
+    "description": "This is the fifth slide with dynamic content.",
+    "link": "https://example.com/slide5",
+    "timestamp": 1620000001
+  }
+]

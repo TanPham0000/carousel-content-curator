@@ -2,6 +2,7 @@
 <?php
 // Configuration
 $json_file = 'carousel_content.json';
+$max_slides = 2; // Limit to 2 dynamic slides (4th and 5th slides)
 
 // Function to read content from JSON file
 function getCarouselContent() {
@@ -26,41 +27,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'add') {
         $content = getCarouselContent();
         
-        // Handle image upload
-        $image_path = '';
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = 'uploads/';
-            
-            // Create directory if it doesn't exist
-            if (!is_dir($upload_dir)) {
-                mkdir($upload_dir, 0755, true);
+        // Check if we already have 2 slides and the action is add
+        if (count($content) >= $max_slides && $action === 'add') {
+            $status_message = '<div class="alert warning">Maximum number of slides reached. Please delete an existing slide before adding a new one.</div>';
+        } else {
+            // Handle image upload
+            $image_path = '';
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $upload_dir = 'uploads/';
+                
+                // Create directory if it doesn't exist
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0755, true);
+                }
+                
+                $filename = uniqid() . '_' . basename($_FILES['image']['name']);
+                $target_file = $upload_dir . $filename;
+                
+                if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
+                    $image_path = $target_file;
+                }
             }
             
-            $filename = uniqid() . '_' . basename($_FILES['image']['name']);
-            $target_file = $upload_dir . $filename;
-            
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
-                $image_path = $target_file;
+            if ($image_path) {
+                // Add new content
+                $new_content = [
+                    'id' => uniqid(),
+                    'image' => $image_path,
+                    'link' => isset($_POST['link']) ? $_POST['link'] : '',
+                    'title' => isset($_POST['title']) ? $_POST['title'] : '',
+                    'description' => isset($_POST['description']) ? $_POST['description'] : '',
+                    'timestamp' => time()
+                ];
+                
+                $content[] = $new_content;
+                
+                // If we now have more than max_slides, remove the oldest one
+                if (count($content) > $max_slides) {
+                    // Sort by timestamp to find the oldest
+                    usort($content, function($a, $b) {
+                        return $a['timestamp'] - $b['timestamp'];
+                    });
+                    
+                    // Delete the associated image if it exists
+                    if (file_exists($content[0]['image'])) {
+                        unlink($content[0]['image']);
+                    }
+                    
+                    // Remove the oldest item
+                    array_shift($content);
+                }
+                
+                saveCarouselContent($content);
+                
+                // Redirect to prevent form resubmission
+                header('Location: ' . $_SERVER['PHP_SELF'] . '?status=success');
+                exit;
             }
-        }
-        
-        if ($image_path) {
-            // Add new content
-            $new_content = [
-                'id' => uniqid(),
-                'image' => $image_path,
-                'link' => isset($_POST['link']) ? $_POST['link'] : '',
-                'title' => isset($_POST['title']) ? $_POST['title'] : '',
-                'description' => isset($_POST['description']) ? $_POST['description'] : '',
-                'timestamp' => time()
-            ];
-            
-            $content[] = $new_content;
-            saveCarouselContent($content);
-            
-            // Redirect to prevent form resubmission
-            header('Location: ' . $_SERVER['PHP_SELF'] . '?status=success');
-            exit;
         }
     } elseif ($action === 'delete' && isset($_POST['id'])) {
         $content = getCarouselContent();
@@ -81,6 +104,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         header('Location: ' . $_SERVER['PHP_SELF'] . '?status=deleted');
         exit;
+    } elseif ($action === 'update' && isset($_POST['id'])) {
+        $content = getCarouselContent();
+        $id = $_POST['id'];
+        
+        foreach ($content as $key => $item) {
+            if ($item['id'] === $id) {
+                // Update fields
+                $content[$key]['title'] = isset($_POST['title']) ? $_POST['title'] : $item['title'];
+                $content[$key]['description'] = isset($_POST['description']) ? $_POST['description'] : $item['description'];
+                $content[$key]['link'] = isset($_POST['link']) ? $_POST['link'] : $item['link'];
+                
+                // Handle image update if provided
+                if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                    $upload_dir = 'uploads/';
+                    
+                    // Create directory if it doesn't exist
+                    if (!is_dir($upload_dir)) {
+                        mkdir($upload_dir, 0755, true);
+                    }
+                    
+                    $filename = uniqid() . '_' . basename($_FILES['image']['name']);
+                    $target_file = $upload_dir . $filename;
+                    
+                    if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
+                        // Delete the old image if it exists
+                        if (file_exists($item['image'])) {
+                            unlink($item['image']);
+                        }
+                        $content[$key]['image'] = $target_file;
+                    }
+                }
+                
+                break;
+            }
+        }
+        
+        saveCarouselContent($content);
+        
+        header('Location: ' . $_SERVER['PHP_SELF'] . '?status=updated');
+        exit;
     }
 }
 
@@ -94,6 +157,12 @@ if (isset($_GET['status'])) {
         case 'deleted':
             $status_message = '<div class="alert success">Content deleted successfully!</div>';
             break;
+        case 'updated':
+            $status_message = '<div class="alert success">Content updated successfully!</div>';
+            break;
+        case 'max_reached':
+            $status_message = '<div class="alert warning">Maximum number of slides reached (2).</div>';
+            break;
     }
 }
 
@@ -106,7 +175,7 @@ $all_content = getCarouselContent();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carousel Content Manager</title>
+    <title>Carousel Content Manager - Slides 4 & 5</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -156,6 +225,10 @@ $all_content = getCarouselContent();
             background-color: #d4edda;
             color: #155724;
         }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
         .content-list {
             margin-top: 30px;
         }
@@ -174,19 +247,27 @@ $all_content = getCarouselContent();
         .content-details {
             flex: 1;
         }
-        .delete-form {
+        .delete-form, .edit-form {
             display: inline;
+        }
+        .slide-number {
+            font-weight: bold;
+            margin-right: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Carousel Content Manager</h1>
+        <h1>Carousel Content Manager - Slides 4 & 5</h1>
+        <p>Manage the dynamic content for slides 4 and 5 of your carousel. The first 3 slides are static and not managed here.</p>
         
         <?php echo $status_message; ?>
         
         <div class="form-container">
-            <h2>Add New Content</h2>
+            <h2>Add New Slide Content</h2>
+            <?php if (count($all_content) >= $max_slides): ?>
+                <div class="alert warning">You have reached the maximum number of slides (<?php echo $max_slides; ?>). Please delete an existing slide before adding a new one.</div>
+            <?php else: ?>
             <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="add">
                 
@@ -212,28 +293,40 @@ $all_content = getCarouselContent();
                 
                 <button type="submit">Add Content</button>
             </form>
+            <?php endif; ?>
         </div>
         
         <div class="content-list">
-            <h2>Existing Content</h2>
+            <h2>Existing Slide Content</h2>
             <?php if (empty($all_content)): ?>
-                <p>No content available.</p>
+                <p>No dynamic content available. Add content to be shown in slides 4 and 5.</p>
             <?php else: ?>
-                <?php foreach ($all_content as $item): ?>
+                <?php 
+                // Sort by timestamp to display in order
+                usort($all_content, function($a, $b) {
+                    return $a['timestamp'] - $b['timestamp'];
+                });
+                
+                foreach ($all_content as $index => $item): 
+                    $slide_number = $index + 4; // Starting from slide 4
+                ?>
                     <div class="content-item">
+                        <span class="slide-number">Slide <?php echo $slide_number; ?>:</span>
                         <img src="<?php echo htmlspecialchars($item['image']); ?>" alt="<?php echo htmlspecialchars($item['title']); ?>" class="content-image">
                         <div class="content-details">
                             <h3><?php echo htmlspecialchars($item['title']); ?></h3>
                             <p><?php echo htmlspecialchars($item['description']); ?></p>
                             <?php if (!empty($item['link'])): ?>
-                                <p><a href="<?php echo htmlspecialchars($item['link']); ?>" target="_blank">View Article</a></p>
+                                <p><a href="<?php echo htmlspecialchars($item['link']); ?>" target="_blank">View Link</a></p>
                             <?php endif; ?>
                         </div>
-                        <form class="delete-form" action="<?php echo $_SERVER['PHP_SELF']; ?>" method="post">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
-                            <button type="submit" onclick="return confirm('Are you sure you want to delete this item?');">Delete</button>
-                        </form>
+                        <div class="actions">
+                            <form class="delete-form" action="<?php echo $_SERVER['PHP_SELF']; ?>" method="post">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                <button type="submit" onclick="return confirm('Are you sure you want to delete this slide content?');">Delete</button>
+                            </form>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
@@ -241,11 +334,8 @@ $all_content = getCarouselContent();
         
         <div class="integration-guide" style="margin-top: 30px; background: #f9f9f9; padding: 20px; border-radius: 4px;">
             <h2>Integration Guide</h2>
-            <p>To integrate this carousel content with your HTML website, add the following JavaScript code to your website:</p>
-            <pre style="background: #eee; padding: 15px; border-radius: 4px; overflow-x: auto;">
-&lt;script src="carousel_content.js"&gt;&lt;/script&gt;
-            </pre>
-            <p>Make sure the carousel_content.js file is in the same directory as your HTML file or adjust the path accordingly.</p>
+            <p>Your carousel is already set up to automatically load the dynamic content for slides 4 and 5.</p>
+            <p>The first 3 slides remain static as defined in your HTML, and these 2 additional slides will be loaded dynamically from the content you manage here.</p>
         </div>
     </div>
 </body>

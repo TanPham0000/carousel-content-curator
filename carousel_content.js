@@ -11,8 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Function to load dynamic content
     function loadDynamicContent() {
-        // Fetch the JSON content
-        fetch('carousel_content.json')
+        // Fetch the JSON content from the PHP endpoint
+        fetch('get_carousel_content.php')
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -27,8 +27,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 console.log('Loaded dynamic content:', data.length, 'items');
                 
-                // Add each content item to the carousel
-                data.forEach(item => {
+                // Only add the dynamic content after existing static slides
+                data.forEach((item, index) => {
                     // Create new carousel slide
                     const slide = document.createElement('figure');
                     slide.className = 'carousel-slide';
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Create image element
                     const img = document.createElement('img');
                     img.src = item.image;
-                    img.alt = item.title;
+                    img.alt = item.title || '';
                     img.loading = 'lazy';
                     
                     // Create figcaption with content
@@ -44,18 +44,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Add title
                     const title = document.createElement('h2');
-                    title.textContent = item.title;
+                    title.textContent = item.title || '';
                     
                     // Add description
                     const description = document.createElement('p');
-                    description.textContent = item.description;
+                    description.textContent = item.description || '';
                     
-                    // Add button
+                    // Add button with link if provided
                     const button = document.createElement('button');
                     button.className = 'read-more';
                     button.textContent = 'Read more';
                     
-                    // Add link functionality if provided
                     if (item.link) {
                         button.classList.add('open-overlay');
                         button.addEventListener('click', function() {
@@ -132,7 +131,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to get current slide index
     function getCurrentSlideIndex() {
         // This function should return the index of the currently visible slide
-        // Implement according to your carousel's logic
         const slides = document.querySelectorAll('.carousel-slide');
         for (let i = 0; i < slides.length; i++) {
             if (slides[i].classList.contains('active')) {
@@ -168,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const nextBtn = document.getElementById('nextBtn');
         
         if (prevBtn && nextBtn) {
-            // Ensure navigation buttons handle the dynamic content
+            // Ensure navigation buttons handle all slides including the dynamic ones
             prevBtn.addEventListener('click', function() {
                 navigateToPrevSlide();
             });
