@@ -10,6 +10,7 @@ import { useContent } from "@/context/ContentContext";
 const ContentForm: React.FC = () => {
   const [image, setImage] = useState<string>("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [title, setTitle] = useState<string>("");
   const [link, setLink] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +35,15 @@ const ContentForm: React.FC = () => {
       toast({
         title: "Missing image",
         description: "Please upload an image for your content",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    if (!title) {
+      toast({
+        title: "Missing title",
+        description: "Please provide a title for your content",
         variant: "destructive",
       });
       return false;
@@ -80,6 +90,7 @@ const ContentForm: React.FC = () => {
     // For now, we'll just use the data URL
     addContent({
       image,
+      title,
       link,
       description,
     });
@@ -92,6 +103,7 @@ const ContentForm: React.FC = () => {
     // Reset the form
     setImage("");
     setImageFile(null);
+    setTitle("");
     setLink("");
     setDescription("");
     setIsSubmitting(false);
@@ -152,6 +164,19 @@ const ContentForm: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="title" className="block text-sm font-medium">
+              Title
+            </label>
+            <Input
+              id="title"
+              type="text"
+              placeholder="Enter content title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
           </div>
           
           <div className="space-y-2">

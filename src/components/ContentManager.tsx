@@ -45,6 +45,7 @@ const ContentManager: React.FC = () => {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
+                    <h3 className="font-medium mb-1">{item.title}</h3>
                     <p className="text-sm text-muted-foreground mb-1">
                       Added {format(item.timestamp, "PPP")}
                     </p>
