@@ -4,7 +4,6 @@ import ContentForm from "@/components/ContentForm";
 import ContentCarousel from "@/components/ContentCarousel";
 import ContentManager from "@/components/ContentManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { useContent } from "@/context/ContentContext";
 import { ContentProvider } from "@/context/ContentContext";
 
@@ -15,8 +14,8 @@ const Index = () => {
     <ContentProvider>
       <div className="container px-4 py-8 mx-auto max-w-6xl">
         <header className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Carousel Content Curator</h1>
-          <p className="text-muted-foreground">Upload and manage content for your carousel display</p>
+          <h1 className="text-3xl font-bold mb-2">Carousel Content Curator</h1>
+          <p className="text-muted-foreground">Upload and manage content for your carousel</p>
         </header>
         
         <Tabs defaultValue="submit" value={activeTab} onValueChange={setActiveTab}>
@@ -28,7 +27,8 @@ const Index = () => {
           </div>
           
           <TabsContent value="submit" className="space-y-8">
-            <ContentFormWithPreview />
+            <ContentForm />
+            <PreviewSection />
           </TabsContent>
           
           <TabsContent value="manage">
@@ -40,25 +40,17 @@ const Index = () => {
   );
 };
 
-const ContentFormWithPreview: React.FC = () => {
+const PreviewSection = () => {
   const { contents } = useContent();
   
   return (
-    <>
-      <ContentForm />
-      
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold text-center mb-6">Preview Carousel</h2>
-        <ContentCarousel items={contents} />
-      </div>
-      
-      <div className="mt-8 text-center">
-        <p className="text-sm text-muted-foreground mb-4">
-          This carousel preview shows how your content will appear on the website.
-          All approved submissions will be displayed in the main carousel.
-        </p>
-      </div>
-    </>
+    <div className="mt-8">
+      <h2 className="text-2xl font-bold text-center mb-6">Preview Carousel</h2>
+      <ContentCarousel items={contents} />
+      <p className="text-sm text-muted-foreground text-center mt-4">
+        This preview shows how your content will appear in the carousel.
+      </p>
+    </div>
   );
 };
 

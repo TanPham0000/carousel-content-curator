@@ -8,15 +8,22 @@ import { useToast } from "@/components/ui/use-toast";
 import { useContent } from "@/context/ContentContext";
 
 const ContentForm: React.FC = () => {
-  const [image, setImage] = useState<string>("");
+  const [formData, setFormData] = useState({
+    image: "",
+    title: "",
+    link: "",
+    description: ""
+  });
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [title, setTitle] = useState<string>("");
-  const [link, setLink] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { addContent } = useContent();
   const { toast } = useToast();
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({ ...prev, [id]: value }));
+  };
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -24,13 +31,15 @@ const ContentForm: React.FC = () => {
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImage(reader.result as string);
+        setFormData(prev => ({ ...prev, image: reader.result as string }));
       };
       reader.readAsDataURL(file);
     }
   };
 
   const validateForm = () => {
+    const { image, title, link, description } = formData;
+    
     if (!image) {
       toast({
         title: "Missing image",
@@ -85,46 +94,32 @@ const ContentForm: React.FC = () => {
     if (!validateForm()) return;
     
     setIsSubmitting(true);
-    
-    // In a real app, we would upload the image to a server here
-    // For now, we'll just use the data URL
-    addContent({
-      image,
-      title,
-      link,
-      description,
-    });
+    addContent(formData);
     
     toast({
-      title: "Content submitted successfully",
-      description: "Your content has been added to the carousel",
+      description: "Content submitted successfully"
     });
     
     // Reset the form
-    setImage("");
+    setFormData({ image: "", title: "", link: "", description: "" });
     setImageFile(null);
-    setTitle("");
-    setLink("");
-    setDescription("");
     setIsSubmitting(false);
   };
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center">Add New Content</CardTitle>
+        <CardTitle className="text-2xl text-center">Add New Content</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="image" className="block text-sm font-medium">
-              Featured Image
-            </label>
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 transition-all hover:border-gray-400 bg-gray-50">
-              {image ? (
-                <div className="relative w-full">
+            <label htmlFor="image" className="block text-sm font-medium">Featured Image</label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 bg-gray-50">
+              {formData.image ? (
+                <div className="relative">
                   <img 
-                    src={image} 
+                    src={formData.image} 
                     alt="Preview" 
                     className="mx-auto max-h-64 object-contain rounded-md"
                   />
@@ -134,7 +129,7 @@ const ContentForm: React.FC = () => {
                     size="sm"
                     className="absolute top-2 right-2"
                     onClick={() => {
-                      setImage("");
+                      setFormData(prev => ({ ...prev, image: "" }));
                       setImageFile(null);
                     }}
                   >
@@ -142,66 +137,55 @@ const ContentForm: React.FC = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="text-center">
-                  <div className="mt-2">
-                    <Input
-                      id="image"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                    <label 
-                      htmlFor="image" 
-                      className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer hover:bg-primary/90"
-                    >
-                      Select Image
-                    </label>
-                    <p className="text-xs text-gray-500 mt-2">
-                      PNG, JPG, GIF up to 10MB
-                    </p>
-                  </div>
-                </div>
+                <>
+                  <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                  <label 
+                    htmlFor="image" 
+                    className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer hover:bg-primary/90"
+                  >
+                    Select Image
+                  </label>
+                  <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF up to 10MB</p>
+                </>
               )}
             </div>
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="title" className="block text-sm font-medium">
-              Title
-            </label>
+            <label htmlFor="title" className="block text-sm font-medium">Title</label>
             <Input
               id="title"
-              type="text"
               placeholder="Enter content title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              value={formData.title}
+              onChange={handleInputChange}
             />
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="link" className="block text-sm font-medium">
-              Article Link
-            </label>
+            <label htmlFor="link" className="block text-sm font-medium">Article Link</label>
             <Input
               id="link"
               type="url"
               placeholder="https://example.com/your-article"
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
+              value={formData.link}
+              onChange={handleInputChange}
             />
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="description" className="block text-sm font-medium">
-              Description
-            </label>
+            <label htmlFor="description" className="block text-sm font-medium">Description</label>
             <Textarea
               id="description"
-              placeholder="Write a brief description of your content..."
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Write a brief description..."
+              rows={3}
+              value={formData.description}
+              onChange={handleInputChange}
             />
           </div>
           
